@@ -17,6 +17,7 @@ class GoogleMusicTrack {
 	public $artist = null;
 	public $title  = null;
 	public $price  = null;
+	public $coverart = null;
 
     public function __toString() {
         return serialize($this);

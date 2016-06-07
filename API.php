@@ -11,6 +11,9 @@ namespace cookieguru\googlemusicsearch;
  * @version   1.0.0
  */
 class API {
+
+	use \Psr\Log\LoggerAwareTrait;
+
 	const BASE = 'https://play.google.com';
 	private $ch;
 
@@ -44,9 +47,14 @@ class API {
 	 * @return \cookieguru\googlemusicsearch\GoogleMusicTrack[]
 	 */
 	public function search($query) {
-		curl_setopt($this->ch, CURLOPT_URL, self::BASE . '/store/search?c=music&docType=4&q=' . urlencode($query));
+		$searchUrl = self::BASE . '/store/search?c=music&docType=4&q=' . urlencode($query);
+
+		$this->logger->info('Google Play Search URL: ' . $searchUrl);
+
+		curl_setopt($this->ch, CURLOPT_URL, $searchUrl);
 
 		$html = curl_exec($this->ch);
+		
 		if(strpos($html, 'We couldn\'t find anything for your search') !== FALSE) {
 			return array();
 		}
@@ -63,24 +71,47 @@ class API {
 			if(isset($title[0]) && isset($title[0]->attributes()->href)) {
 				$artist = $xml->xpath("//*[contains(@class,'subtitle-container')]");
 
-				$price = $xml->xpath("//*[contains(@class,'price-container')]");
-				if(isset($price[0]->span[2])) {
-					$price = (string)$price[0]->span[2];
-				} else {
-					$price = $price[0]->xpath("//button[contains(@class,'price')][contains(@class,'buy')]");
-					$price = (string)$price[0]->span;
+				$img_attrs = [];
+				$img = '';
+
+				if($xml->xpath("//img[contains(@class, 'cover-image')]")) {
+					$img_attrs = $xml->xpath("//img[contains(@class, 'cover-image')]")[0]->attributes();
+				}
+
+				foreach($img_attrs as $key => $value) {
+					if($key == 'data-cover-large') {
+						$img = $value;
+					}
 				}
 
 				$temp = new \cookieguru\googlemusicsearch\GoogleMusicTrack();
 				$temp->url    = self::BASE . $title[0]->attributes()->href;
 				$temp->artist = (string)$artist[0]->a;
 				$temp->title  = trim($title[0]);
-				$temp->price  = $price;
+				$temp->coverArtUrl = $img ? (substr($img, 0, -3) . '600') : '';
 
 				$links[] = $temp;
 			}
 		}
 
-		return array_values(array_unique($links));
+		return array_values($this->get_unique_song_array($links));
+	}
+
+	//This should probably be in a helper class
+	public function get_unique_song_array($songArray) {
+		$resultArray = array();
+		$i = 0;
+		$existingSongArtistArray = array();
+
+		foreach($songArray as $song) {
+			//If song, artist and url combination doesn't exist, add the combination in the result array,
+			//Otherwise skip the current song as it already exists
+			if ( !in_array($song->artist.$song->title.$song->url, $existingSongArtistArray) ) {
+				$existingSongArtistArray[$i] = $song->artist.$song->title.$song->url;
+				$resultArray[$i] = $song;
+			}
+			$i++;
+		}
+		return $resultArray;
 	}
 }
