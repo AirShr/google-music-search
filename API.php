@@ -12,8 +12,6 @@ namespace cookieguru\googlemusicsearch;
  */
 class API {
 
-	use \Psr\Log\LoggerAwareTrait;
-
 	const BASE = 'https://play.google.com';
 	private $ch;
 
@@ -49,14 +47,16 @@ class API {
 	public function search($query) {
 		$searchUrl = self::BASE . '/store/search?c=music&docType=4&q=' . urlencode($query);
 
-		$this->logger->info('Google Play Search URL: ' . $searchUrl);
-
 		curl_setopt($this->ch, CURLOPT_URL, $searchUrl);
 
 		$html = curl_exec($this->ch);
 		
 		if(strpos($html, 'We couldn\'t find anything for your search') !== FALSE) {
-			return array();
+			return [];
+		}
+		
+		if(curl_getinfo($this->ch, CURLINFO_HTTP_CODE) != 200) {
+			return [];
 		}
 
 		$doc = new \DOMDocument();
@@ -64,7 +64,7 @@ class API {
 		@$doc->loadHTML($html);
 		$finder = new \DomXPath($doc);
 
-		$links = array();
+		$links = [];
 		foreach($finder->query("//*[contains(@class,'card-list')]")->item(0)->getElementsByTagName('div') as $div) {
 			$xml = simplexml_load_string($doc->saveXML($div));
 			$title = $xml->xpath("//*[contains(@class,'title')]");
@@ -99,9 +99,9 @@ class API {
 
 	//This should probably be in a helper class
 	public function get_unique_song_array($songArray) {
-		$resultArray = array();
+		$resultArray = [];
 		$i = 0;
-		$existingSongArtistArray = array();
+		$existingSongArtistArray = [];
 
 		foreach($songArray as $song) {
 			//If song, artist and url combination doesn't exist, add the combination in the result array,
