@@ -86,7 +86,7 @@ class API {
 
 				$temp = new \cookieguru\googlemusicsearch\GoogleMusicTrack();
 				$temp->url    = self::BASE . $title[0]->attributes()->href;
-				$temp->artist = (string)$artist[0]->a;
+				$temp->artist = utf8_decode((string)$artist[0]->a);
 				$temp->title  = trim($title[0]);
 				$temp->coverArtUrl = $img ? (substr($img, 0, -3) . '600') : '';
 
