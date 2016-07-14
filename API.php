@@ -89,7 +89,7 @@ class API {
 				$temp->url    = self::BASE . $title[0]->attributes()->href;
 				$temp->songId = substr($title[0]->attributes()->href, strpos($title[0]->attributes()->href, '&tid=') + 5);
 				$temp->artist = utf8_decode((string)$artist[0]->a);
-				$temp->title  = trim(utf8_decode($title[0]));
+				$temp->title  = utf8_decode(trim($title[0]));
 				$temp->coverArtUrl = $img ? (substr($img, 0, -3) . '600') : '';
 
 				$links[] = $temp;
